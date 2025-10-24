@@ -79,7 +79,7 @@ func init() {
 	}
 
 	if len(errors) > 0 {
-		logger.Stderr.Error("error parsing environment variables", logger.ErrAttr(errors[0]))
+		logger.Stderr.Error("error parsing environment variables", logger.ErrorsAttr(errors...))
 		os.Exit(1)
 	}
 
