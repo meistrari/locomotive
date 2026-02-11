@@ -12,6 +12,7 @@ With tailored support for:
 - Loki
 - Sentry
 - Papertrail
+- OpenTelemetry HTTP
 
 And more with the standard JSON and JSON Lines modes.
 
@@ -78,6 +79,7 @@ Configuration is done through environment variables. See explanation and example
     - Example for Datadog: `https://http-intake.logs.datadoghq.com/api/v2/logs`
     - Example for Axiom: `https://api.axiom.co/v1/datasets/<DATASET_NAME>/ingest`
     - Example for BetterStack: `https://in.logs.betterstack.com`
+    - Example for OpenTelemetry HTTP: `https://<OTEL_HTTP_ENDPOINT>/v1/logs`
 
     See [Provider specific setup](#provider-specific-setup) for more information.
 
@@ -112,6 +114,7 @@ Configuration is done through environment variables. See explanation and example
     - `betterstack`
     - `loki`
     - `sentry`
+    - `otel_http`
 
     </br>
 
@@ -227,3 +230,10 @@ Configuration is done through environment variables. See explanation and example
 
     </br>
 
+#### OpenTelemetry HTTP
+
+- `LOCOMOTIVE_WEBHOOK_MODE` - `otel_http`
+
+- `LOCOMOTIVE_WEBHOOK_URL` - `https://<OTEL_COLLECTOR_HOSTNAME>/v1/logs`
+
+    The hostname would depend on where you are running your OpenTelemetry Collector. Remember to also add the port if necessary, likely `4318`.
