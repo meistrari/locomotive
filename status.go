@@ -11,10 +11,10 @@ import (
 	"github.com/brody192/locomotive/internal/util"
 )
 
-func reportStatusAsync(deployLogsProcessed *atomic.Int64, httpLogsProcessed *atomic.Int64) {
+func reportStatusAsync(deployLogsProcessed *atomic.Int64, httpLogsProcessed *atomic.Int64, metricsProcessed *atomic.Int64) {
 	initReport := make(chan struct{}, 1)
 
-	var prevDeployLogs, prevHttpLogs int64
+	var prevDeployLogs, prevHttpLogs, prevMetrics int64
 
 	go func() {
 		t := time.NewTicker(50 * time.Millisecond)
@@ -23,15 +23,18 @@ func reportStatusAsync(deployLogsProcessed *atomic.Int64, httpLogsProcessed *ato
 		for range t.C {
 			deployLogsProcessed := deployLogsProcessed.Load()
 			httpLogsProcessed := httpLogsProcessed.Load()
+			metricsProcessed := metricsProcessed.Load()
 
-			if deployLogsProcessed > 0 || httpLogsProcessed > 0 {
+			if deployLogsProcessed > 0 || httpLogsProcessed > 0 || metricsProcessed > 0 {
 				logger.Stdout.Info("The locomotive is chugging along...",
 					slog.Int64("deploy_logs_processed", deployLogsProcessed),
 					slog.Int64("http_logs_processed", httpLogsProcessed),
+					slog.Int64("metrics_processed", metricsProcessed),
 				)
 
 				prevDeployLogs = deployLogsProcessed
 				prevHttpLogs = httpLogsProcessed
+				prevMetrics = metricsProcessed
 
 				close(initReport)
 				return
@@ -48,14 +51,16 @@ func reportStatusAsync(deployLogsProcessed *atomic.Int64, httpLogsProcessed *ato
 		for range t.C {
 			deployLogsProcessed := deployLogsProcessed.Load()
 			httpLogsProcessed := httpLogsProcessed.Load()
+			metricsProcessed := metricsProcessed.Load()
 
-			if deployLogsProcessed == 0 && httpLogsProcessed == 0 {
+			if deployLogsProcessed == 0 && httpLogsProcessed == 0 && metricsProcessed == 0 {
 				continue
 			}
 
 			statusLog := logger.Stdout.With(
 				slog.Int64("deploy_logs_processed", deployLogsProcessed),
 				slog.Int64("http_logs_processed", httpLogsProcessed),
+				slog.Int64("metrics_processed", metricsProcessed),
 			)
 
 			if logger.StdoutLvl.Level() == slog.LevelDebug {
@@ -72,7 +77,7 @@ func reportStatusAsync(deployLogsProcessed *atomic.Int64, httpLogsProcessed *ato
 				)
 			}
 
-			if deployLogsProcessed == prevDeployLogs && httpLogsProcessed == prevHttpLogs {
+			if deployLogsProcessed == prevDeployLogs && httpLogsProcessed == prevHttpLogs && metricsProcessed == prevMetrics {
 				statusLog.Info("The locomotive is waiting for cargo...")
 			} else {
 				statusLog.Info("The locomotive is chugging along...")
@@ -80,6 +85,7 @@ func reportStatusAsync(deployLogsProcessed *atomic.Int64, httpLogsProcessed *ato
 
 			prevDeployLogs = deployLogsProcessed
 			prevHttpLogs = httpLogsProcessed
+			prevMetrics = metricsProcessed
 		}
 	}()
 }

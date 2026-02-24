@@ -10,3 +10,6 @@ var EnvironmentQuery string
 
 //go:embed deployment.graphql
 var DeploymentQuery string
+
+//go:embed metrics.graphql
+var MetricsQuery string
