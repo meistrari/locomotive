@@ -2,6 +2,7 @@ package reconstruct_otel_http
 
 import (
 	"encoding/json"
+	"log/slog"
 	"strconv"
 
 	"github.com/brody192/locomotive/internal/railway/metrics"
@@ -75,8 +76,8 @@ func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
 		for _, m := range g.metrics {
 			otelInfo, ok := measurementToOtel[m.Measurement]
 			if !ok {
-				otelInfo.Name = "railway." + m.Measurement
-				otelInfo.Unit = "1"
+				slog.Warn("Measurement is not mapped and is being ignored", slog.String("measurement", m.Measurement))
+				continue
 			}
 
 			points := make([]dataPoint, len(m.Values))

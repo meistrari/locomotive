@@ -16,7 +16,9 @@ import (
 func startCollectingMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metricsTrack chan []metrics.Metric, environmentId uuid.UUID, serviceIds []uuid.UUID, metricCollectionInterval time.Duration) error {
 	ticker := time.NewTicker(metricCollectionInterval)
 
-	collectMetrics(ctx, gqlClient, metricsTrack, environmentId, serviceIds, metricCollectionInterval)
+	if err := collectMetrics(ctx, gqlClient, metricsTrack, environmentId, serviceIds, metricCollectionInterval); err != nil {
+		logger.Stderr.Error("error collecting metrics", logger.ErrAttr(err))
+	}
 
 	for {
 		select {
@@ -24,7 +26,9 @@ func startCollectingMetrics(ctx context.Context, gqlClient *railway.GraphQLClien
 			ticker.Stop()
 			return nil
 		case <-ticker.C:
-			collectMetrics(ctx, gqlClient, metricsTrack, environmentId, serviceIds, metricCollectionInterval)
+			if err := collectMetrics(ctx, gqlClient, metricsTrack, environmentId, serviceIds, metricCollectionInterval); err != nil {
+				logger.Stderr.Error("error collecting metrics", logger.ErrAttr(err))
+			}
 		}
 	}
 }
