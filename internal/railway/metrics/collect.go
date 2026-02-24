@@ -3,8 +3,10 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/brody192/locomotive/internal/logger"
 	"github.com/brody192/locomotive/internal/railway"
 	"github.com/brody192/locomotive/internal/railway/gql/queries"
 	"github.com/flexstack/uuid"
@@ -36,9 +38,22 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 			"measurements":  defaultMeasurements,
 		}
 
+		logger.Stdout.Debug("querying metrics",
+			slog.String("service_id", serviceId.String()),
+			slog.String("environment_id", environmentId.String()),
+			slog.String("start_date", startDate.Format(time.RFC3339)),
+			slog.String("end_date", endDate.Format(time.RFC3339)),
+			slog.Any("measurements", defaultMeasurements),
+		)
+
 		if err := gqlClient.Client.Exec(ctx, queries.MetricsQuery, resp, variables); err != nil {
 			return fmt.Errorf("error querying metrics for service %s: %w", serviceId, err)
 		}
+
+		logger.Stdout.Debug("metrics query response",
+			slog.String("service_id", serviceId.String()),
+			slog.Int("metrics_count", len(resp.Metrics)),
+		)
 
 		for _, m := range resp.Metrics {
 			metric := Metric{

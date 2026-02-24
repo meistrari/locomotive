@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strconv"
 
+	"github.com/brody192/locomotive/internal/logger"
 	"github.com/brody192/locomotive/internal/railway/metrics"
 )
 
@@ -76,7 +77,7 @@ func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
 		for _, m := range g.metrics {
 			otelInfo, ok := measurementToOtel[m.Measurement]
 			if !ok {
-				slog.Warn("Measurement is not mapped and is being ignored", slog.String("measurement", m.Measurement))
+				logger.Stdout.Warn("Measurement is not mapped and is being ignored", slog.String("measurement", m.Measurement))
 				continue
 			}
 
