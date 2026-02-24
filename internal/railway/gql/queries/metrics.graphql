@@ -1,21 +1,20 @@
-query metrics($environmentId: String, $projectId: String, $serviceId: String, $volumeId: String, $volumeInstanceExternalId: String, $workspaceId: String, $startDate: DateTime!, $endDate: DateTime, $sampleRateSeconds: Int, $averagingWindowSeconds: Int, $groupBy: [MetricTag!], $includeDeleted: Boolean, $measurements: [MetricMeasurement!]!) {
+query metrics(
+  $environmentId: String,
+  $serviceId: String,
+  $startDate: DateTime!,
+  $endDate: DateTime,
+  $measurements: [MetricMeasurement!]!
+) {
   metrics(
-    workspaceId: $workspaceId
-    projectId: $projectId
     environmentId: $environmentId
+    serviceId: $serviceId
 
     measurements: $measurements
 
     startDate: $startDate
     endDate: $endDate
 
-    averagingWindowSeconds: $averagingWindowSeconds
-    groupBy: $groupBy
-    includeDeleted: $includeDeleted
-    sampleRateSeconds: $sampleRateSeconds
-    serviceId: $serviceId
-    volumeId: $volumeId
-    volumeInstanceExternalId: $volumeInstanceExternalId
+    groupBy: ["DEPLOYMENT_INSTANCE_ID"]
   ) {
     measurement
     tags
