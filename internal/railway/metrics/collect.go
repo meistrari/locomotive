@@ -2,15 +2,67 @@ package metrics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
+	cache "github.com/Code-Hex/go-generics-cache"
 	"github.com/brody192/locomotive/internal/logger"
 	"github.com/brody192/locomotive/internal/railway"
 	"github.com/brody192/locomotive/internal/railway/gql/queries"
 	"github.com/flexstack/uuid"
+	"github.com/hasura/go-graphql-client"
 )
+
+var metadataEnvironmentCache = cache.New[uuid.UUID, map[uuid.UUID]string]()
+
+func getMetadataMapForEnvironment(ctx context.Context, g *graphql.Client, environmentId uuid.UUID) (map[uuid.UUID]string, error) {
+	metadataMap, ok := metadataEnvironmentCache.Get(environmentId)
+	if ok {
+		return metadataMap, nil
+	}
+
+	if g == nil {
+		return nil, errors.New("client is nil")
+	}
+
+	environment := &queries.EnvironmentData{}
+
+	variables := map[string]any{
+		"id": environmentId,
+	}
+
+	if err := g.Exec(ctx, queries.EnvironmentQuery, &environment, variables); err != nil {
+		return nil, err
+	}
+
+	project := &queries.ProjectData{}
+
+	variables = map[string]any{
+		"id": environment.Environment.ProjectID,
+	}
+
+	if err := g.Exec(ctx, queries.ProjectQuery, &project, variables); err != nil {
+		return nil, err
+	}
+
+	idToNameMap := make(map[uuid.UUID]string)
+
+	for _, e := range project.Project.Environments.Edges {
+		idToNameMap[e.Node.ID] = e.Node.Name
+	}
+
+	for _, s := range project.Project.Services.Edges {
+		idToNameMap[s.Node.ID] = s.Node.Name
+	}
+
+	idToNameMap[project.Project.ID] = project.Project.Name
+
+	metadataEnvironmentCache.Set(environmentId, idToNameMap, cache.WithExpiration(10*time.Minute))
+
+	return idToNameMap, nil
+}
 
 var defaultMeasurements = []string{
 	"CPU_USAGE",
@@ -22,6 +74,11 @@ var defaultMeasurements = []string{
 }
 
 func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metricsTrack chan<- []Metric, environmentId uuid.UUID, serviceIds []uuid.UUID, lookback time.Duration) error {
+	metadataMap, err := getMetadataMapForEnvironment(ctx, gqlClient.Client, environmentId)
+	if err != nil {
+		return fmt.Errorf("error getting metadata map: %w", err)
+	}
+
 	startDate := time.Now().Add(-lookback)
 
 	var allMetrics []Metric
@@ -53,6 +110,10 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 		)
 
 		for _, m := range resp.Metrics {
+			serviceName, _ := metadataMap[m.Tags.ServiceId]
+			environmentName, _ := metadataMap[m.Tags.EnvironmentId]
+			projectName, _ := metadataMap[m.Tags.ProjectId]
+
 			metric := Metric{
 				Measurement: m.Measurement,
 				Tags: MetricTags{
@@ -62,6 +123,9 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 					ProjectId:            m.Tags.ProjectId,
 					Region:               m.Tags.Region,
 					ServiceId:            m.Tags.ServiceId,
+					ServiceName:          serviceName,
+					EnvironmentName:      environmentName,
+					ProjectName:          projectName,
 				},
 				Values: make([]MetricValue, len(m.Values)),
 			}

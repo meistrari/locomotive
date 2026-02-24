@@ -19,6 +19,9 @@ type MetricTags struct {
 	ProjectId            uuid.UUID
 	Region               string
 	ServiceId            uuid.UUID
+	ServiceName          string
+	EnvironmentName      string
+	ProjectName          string
 }
 
 type MetricValue struct {

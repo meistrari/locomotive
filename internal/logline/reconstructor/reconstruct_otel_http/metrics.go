@@ -60,16 +60,28 @@ func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
 		g := groups[key]
 
 		resourceAttrs := []attribute{
-			stringAttribute("service.instance.id", g.tags.ServiceId.String()),
-			stringAttribute("deployment.environment.id", g.tags.EnvironmentId.String()),
+			stringAttribute("service_id", g.tags.ServiceId.String()),
+			stringAttribute("environment_id", g.tags.EnvironmentId.String()),
 		}
 
 		if g.tags.ProjectId.String() != "00000000-0000-0000-0000-000000000000" {
-			resourceAttrs = append(resourceAttrs, stringAttribute("railway.project.id", g.tags.ProjectId.String()))
+			resourceAttrs = append(resourceAttrs, stringAttribute("project_id", g.tags.ProjectId.String()))
 		}
 
 		if g.tags.Region != "" {
-			resourceAttrs = append(resourceAttrs, stringAttribute("cloud.region", g.tags.Region))
+			resourceAttrs = append(resourceAttrs, stringAttribute("cloud_region", g.tags.Region))
+		}
+
+		if g.tags.ServiceName != "" {
+			resourceAttrs = append(resourceAttrs, stringAttribute("service_name", g.tags.ServiceName))
+		}
+
+		if g.tags.EnvironmentName != "" {
+			resourceAttrs = append(resourceAttrs, stringAttribute("environment_name", g.tags.EnvironmentName))
+		}
+
+		if g.tags.ProjectName != "" {
+			resourceAttrs = append(resourceAttrs, stringAttribute("project_name", g.tags.ProjectName))
 		}
 
 		var otelMetrics []metric
@@ -86,14 +98,15 @@ func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
 				dp := dataPoint{
 					TimeUnixNano: strconv.FormatInt(v.Timestamp.UnixNano(), 10),
 					AsDouble:     v.Value,
+					Attributes:   append([]attribute{}, resourceAttrs...),
 				}
 
 				if m.Tags.DeploymentId.String() != "00000000-0000-0000-0000-000000000000" {
-					dp.Attributes = append(dp.Attributes, stringAttribute("railway.deployment.id", m.Tags.DeploymentId.String()))
+					dp.Attributes = append(dp.Attributes, stringAttribute("deployment_id", m.Tags.DeploymentId.String()))
 				}
 
 				if m.Tags.DeploymentInstanceId.String() != "00000000-0000-0000-0000-000000000000" {
-					dp.Attributes = append(dp.Attributes, stringAttribute("railway.deployment_instance.id", m.Tags.DeploymentInstanceId.String()))
+					dp.Attributes = append(dp.Attributes, stringAttribute("deployment_instance_id", m.Tags.DeploymentInstanceId.String()))
 				}
 
 				points[i] = dp
@@ -116,6 +129,11 @@ func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
 			}},
 		})
 	}
+
+	logger.Stdout.Debug("reconstructed metrics in otel format",
+		slog.Any("metrics", data),
+		slog.Int("resource_metrics_count", len(data.ResourceMetrics)),
+	)
 
 	return json.Marshal(data)
 }
