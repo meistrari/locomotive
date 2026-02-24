@@ -22,8 +22,7 @@ var defaultMeasurements = []string{
 }
 
 func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metricsTrack chan<- []Metric, environmentId uuid.UUID, serviceIds []uuid.UUID, lookback time.Duration) error {
-	endDate := time.Now()
-	startDate := endDate.Add(-lookback)
+	startDate := time.Now().Add(-lookback)
 
 	var allMetrics []Metric
 
@@ -34,15 +33,13 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 			"environmentId": environmentId.String(),
 			"serviceId":     serviceId.String(),
 			"startDate":     startDate.Format(time.RFC3339),
-			"endDate":       endDate.Format(time.RFC3339),
 			"measurements":  defaultMeasurements,
 		}
 
 		logger.Stdout.Debug("querying metrics",
-			slog.String("service_id", serviceId.String()),
-			slog.String("environment_id", environmentId.String()),
-			slog.String("start_date", startDate.Format(time.RFC3339)),
-			slog.String("end_date", endDate.Format(time.RFC3339)),
+			slog.String("serviceId", serviceId.String()),
+			slog.String("environmentId", environmentId.String()),
+			slog.String("startDate", startDate.Format(time.RFC3339)),
 			slog.Any("measurements", defaultMeasurements),
 		)
 

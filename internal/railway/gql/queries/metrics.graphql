@@ -1,23 +1,28 @@
 query metrics(
-  $environmentId: String,
+  $environmentId: String!,
   $serviceId: String,
   $startDate: DateTime!,
-  $endDate: DateTime,
   $measurements: [MetricMeasurement!]!
 ) {
   metrics(
     environmentId: $environmentId
     serviceId: $serviceId
 
+    startDate: $startDate
+
     measurements: $measurements
 
-    startDate: $startDate
-    endDate: $endDate
-
-    groupBy: ["DEPLOYMENT_INSTANCE_ID"]
+    groupBy: [PROJECT_ID, ENVIRONMENT_ID, SERVICE_ID]
   ) {
     measurement
-    tags
-    values
+    tags {
+      environmentId
+      projectId
+      serviceId
+    }
+    values {
+      ts
+      value
+    }
   }
 }
