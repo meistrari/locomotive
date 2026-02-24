@@ -38,4 +38,7 @@ type config struct {
 
 	EnableHttpLogs   bool `env:"ENABLE_HTTP_LOGS" envDefault:"false"`
 	EnableDeployLogs bool `env:"ENABLE_DEPLOY_LOGS" envDefault:"true"`
+	EnableMetrics    bool `env:"ENABLE_METRICS" envDefault:"false"`
+
+	CollectMetricsEvery time.Duration `env:"COLLECT_METRICS_EVERY" envDefault:"1m"`
 }

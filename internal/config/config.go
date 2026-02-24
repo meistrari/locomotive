@@ -81,8 +81,8 @@ func init() {
 		}
 	}
 
-	if (!Global.EnableDeployLogs && !Global.EnableHttpLogs) && len(errors) == 0 {
-		errors = append(errors, fmt.Errorf("at least one of ENABLE_DEPLOY_LOGS or ENABLE_HTTP_LOGS must be true"))
+	if (!Global.EnableDeployLogs && !Global.EnableHttpLogs && !Global.EnableMetrics) && len(errors) == 0 {
+		errors = append(errors, fmt.Errorf("at least one of ENABLE_DEPLOY_LOGS, ENABLE_HTTP_LOGS, or ENABLE_METRICS must be true"))
 	}
 
 	if len(errors) > 0 {
@@ -151,5 +151,11 @@ func init() {
 	// Warn if we added any header validation attributes beyond the basic ones
 	if len(headerAttrs) > 2 && len(hostAttrs) <= 2 {
 		logger.Stderr.Warn("possible webhook header misconfiguration", headerAttrs...)
+	}
+
+	if Global.EnableMetrics && Global.WebhookMode != WebhookModeOtelHTTP {
+		logger.Stderr.Warn("metrics collection is enabled but webhook mode is not otel_http; metrics will not be sent",
+			slog.Any("configured_mode", Global.WebhookMode),
+		)
 	}
 }

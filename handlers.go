@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"github.com/brody192/locomotive/internal/logger"
+	"github.com/brody192/locomotive/internal/railway/metrics"
 	"github.com/brody192/locomotive/internal/railway/subscribe/environment_logs"
 	"github.com/brody192/locomotive/internal/railway/subscribe/http_logs"
 	"github.com/brody192/locomotive/internal/webhook"
@@ -56,6 +57,31 @@ func handleHttpLogsAsync(ctx context.Context, httpLogsProcessed *atomic.Int64, h
 				}
 
 				httpLogsProcessed.Add(int64(len(logs)))
+			}
+		}
+	}()
+}
+
+func handleMetricsAsync(ctx context.Context, metricsProcessed *atomic.Int64, metricsTrack chan []metrics.Metric) {
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case m := <-metricsTrack:
+				if serializedMetrics, err := webhook.SendMetricsWebhook(m); err != nil {
+					attrs := []any{logger.ErrAttr(err)}
+
+					if serializedMetrics != nil {
+						attrs = append(attrs, slog.String("serialized_metrics", string(serializedMetrics)))
+					}
+
+					logger.Stderr.Error("error sending metrics webhook(s)", attrs...)
+
+					continue
+				}
+
+				metricsProcessed.Add(int64(len(m)))
 			}
 		}
 	}()

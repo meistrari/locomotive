@@ -10,6 +10,7 @@ import (
 	"github.com/brody192/locomotive/internal/errgroup"
 	"github.com/brody192/locomotive/internal/logger"
 	"github.com/brody192/locomotive/internal/railway"
+	"github.com/brody192/locomotive/internal/railway/metrics"
 	"github.com/brody192/locomotive/internal/railway/subscribe/environment_logs"
 	"github.com/brody192/locomotive/internal/railway/subscribe/http_logs"
 )
@@ -51,6 +52,7 @@ func main() {
 		slog.Any("webhook_mode", config.Global.WebhookMode),
 		slog.Bool("enable_http_logs", config.Global.EnableHttpLogs),
 		slog.Bool("enable_deploy_logs", config.Global.EnableDeployLogs),
+		slog.Bool("enable_metrics", config.Global.EnableMetrics),
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -58,14 +60,17 @@ func main() {
 
 	serviceLogTrack := make(chan []environment_logs.EnvironmentLogWithMetadata)
 	httpLogTrack := make(chan []http_logs.DeploymentHttpLogWithMetadata)
+	metricsTrack := make(chan []metrics.Metric)
 
 	deployLogsProcessed := atomic.Int64{}
 	httpLogsProcessed := atomic.Int64{}
+	metricsProcessed := atomic.Int64{}
 
-	reportStatusAsync(&deployLogsProcessed, &httpLogsProcessed)
+	reportStatusAsync(&deployLogsProcessed, &httpLogsProcessed, &metricsProcessed)
 
 	handleDeployLogsAsync(ctx, &deployLogsProcessed, serviceLogTrack)
 	handleHttpLogsAsync(ctx, &httpLogsProcessed, httpLogTrack)
+	handleMetricsAsync(ctx, &metricsProcessed, metricsTrack)
 
 	errGroup := errgroup.NewErrGroup()
 
@@ -85,6 +90,15 @@ func main() {
 		}
 
 		return startStreamingHttpLogs(ctx, gqlClient, httpLogTrack, config.Global.EnvironmentId, config.Global.ServiceIds)
+	})
+
+	errGroup.Go(func() error {
+		if !config.Global.EnableMetrics {
+			logger.Stdout.Info("Metrics transport is disabled. To enable it, set LOCOMOTIVE_ENABLE_METRICS=true")
+			return nil
+		}
+
+		return startCollectingMetrics(ctx, gqlClient, metricsTrack, config.Global.EnvironmentId, config.Global.ServiceIds, config.Global.CollectMetricsEvery)
 	})
 
 	logger.Stdout.Info("The locomotive is waiting for cargo...")

@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/brody192/locomotive/internal/config"
+	"github.com/brody192/locomotive/internal/logline/reconstructor/reconstruct_otel_http"
+	"github.com/brody192/locomotive/internal/railway/metrics"
 	"github.com/brody192/locomotive/internal/railway/subscribe/environment_logs"
 	"github.com/brody192/locomotive/internal/railway/subscribe/http_logs"
 )
@@ -27,7 +29,9 @@ func SendWebhookForDeployLogs(logs []environment_logs.EnvironmentLogWithMetadata
 		return nil, fmt.Errorf("failed to reconstruct deploy log lines: %w", err)
 	}
 
-	return payload, sendRawWebhook(payload, config.Global.WebhookUrl, config.Global.AdditionalHeaders, client)
+	webhookUrl := resolveLogsWebhookUrl()
+
+	return payload, sendRawWebhook(payload, webhookUrl, config.Global.AdditionalHeaders, client)
 }
 
 func SendWebhookForHttpLogs(logs []http_logs.DeploymentHttpLogWithMetadata, client *http.Client) (serializedLogs []byte, err error) {
@@ -36,7 +40,40 @@ func SendWebhookForHttpLogs(logs []http_logs.DeploymentHttpLogWithMetadata, clie
 		return nil, fmt.Errorf("failed to reconstruct http log lines: %w", err)
 	}
 
-	return payload, sendRawWebhook(payload, config.Global.WebhookUrl, config.Global.AdditionalHeaders, client)
+	webhookUrl := resolveLogsWebhookUrl()
+
+	return payload, sendRawWebhook(payload, webhookUrl, config.Global.AdditionalHeaders, client)
+}
+
+func SendWebhookForMetrics(m []metrics.Metric, client *http.Client) (serializedMetrics []byte, err error) {
+	payload, err := reconstruct_otel_http.MetricsOtel(m)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reconstruct metrics: %w", err)
+	}
+
+	webhookUrl := resolveMetricsWebhookUrl()
+
+	return payload, sendRawWebhook(payload, webhookUrl, config.Global.AdditionalHeaders, client)
+}
+
+func resolveLogsWebhookUrl() url.URL {
+	webhookUrl := config.Global.WebhookUrl
+
+	if config.Global.WebhookMode == config.WebhookModeOtelHTTP {
+		webhookUrl.Path = strings.TrimRight(webhookUrl.Path, "/") + "/v1/logs"
+	}
+
+	return webhookUrl
+}
+
+func resolveMetricsWebhookUrl() url.URL {
+	webhookUrl := config.Global.WebhookUrl
+
+	if config.Global.WebhookMode == config.WebhookModeOtelHTTP {
+		webhookUrl.Path = strings.TrimRight(webhookUrl.Path, "/") + "/v1/metrics"
+	}
+
+	return webhookUrl
 }
 
 func sendRawWebhook(logs []byte, url url.URL, additionalHeaders config.AdditionalHeaders, client *http.Client) error {
