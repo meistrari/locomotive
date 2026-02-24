@@ -68,7 +68,7 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 
 			for i, v := range m.Values {
 				metric.Values[i] = MetricValue{
-					Timestamp: time.UnixMilli(v.Ts),
+					Timestamp: time.Unix(v.Ts, 0),
 					Value:     v.Value,
 				}
 			}
