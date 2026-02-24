@@ -19,6 +19,7 @@ var measurementToOtel = map[string]struct {
 	"EPHEMERAL_DISK_USAGE_GB": {Name: "railway.ephemeral_disk.usage", Unit: "GBy"},
 	"NETWORK_RX_GB":           {Name: "railway.network.rx", Unit: "GBy"},
 	"NETWORK_TX_GB":           {Name: "railway.network.tx", Unit: "GBy"},
+	"INSTANCE_COUNT":           {Name: "railway.instance.count", Unit: "1"},
 }
 
 func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
@@ -98,6 +99,7 @@ func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
 				dp := dataPoint{
 					TimeUnixNano: strconv.FormatInt(v.Timestamp.UnixNano(), 10),
 					AsDouble:     v.Value,
+					AsInt:        v.IntValue,
 					Attributes:   append([]attribute{}, resourceAttrs...),
 				}
 

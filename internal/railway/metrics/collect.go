@@ -109,10 +109,16 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 			slog.Int("metrics_count", len(resp.Metrics)),
 		)
 
+		instanceIds := make(map[uuid.UUID]struct{})
+
 		for _, m := range resp.Metrics {
 			serviceName, _ := metadataMap[m.Tags.ServiceId]
 			environmentName, _ := metadataMap[m.Tags.EnvironmentId]
 			projectName, _ := metadataMap[m.Tags.ProjectId]
+
+			if (m.Tags.DeploymentInstanceId != uuid.UUID{}) {
+				instanceIds[m.Tags.DeploymentInstanceId] = struct{}{}
+			}
 
 			metric := Metric{
 				Measurement: m.Measurement,
@@ -138,6 +144,30 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 			}
 
 			allMetrics = append(allMetrics, metric)
+		}
+
+		if len(instanceIds) > 0 {
+			serviceName, _ := metadataMap[serviceId]
+			environmentName, _ := metadataMap[environmentId]
+
+			allMetrics = append(allMetrics, Metric{
+				Measurement: "INSTANCE_COUNT",
+				Tags: MetricTags{
+					EnvironmentId:   environmentId,
+					ServiceId:       serviceId,
+					ServiceName:     serviceName,
+					EnvironmentName: environmentName,
+					ProjectName:     metadataMap[resp.Metrics[0].Tags.ProjectId],
+					ProjectId:       resp.Metrics[0].Tags.ProjectId,
+					Region:          resp.Metrics[0].Tags.Region,
+				},
+				Values: []MetricValue{
+					{
+						Timestamp: time.Now(),
+						IntValue:  int64(len(instanceIds)),
+					},
+				},
+			})
 		}
 	}
 

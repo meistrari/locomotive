@@ -26,6 +26,7 @@ type gauge struct {
 
 type dataPoint struct {
 	TimeUnixNano string      `json:"timeUnixNano"`
-	AsDouble     float64     `json:"asDouble"`
+	AsDouble     float64     `json:"asDouble,omitempty"`
+	AsInt        int64       `json:"asInt,omitempty"`
 	Attributes   []attribute `json:"attributes,omitempty"`
 }

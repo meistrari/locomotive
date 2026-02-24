@@ -27,4 +27,5 @@ type MetricTags struct {
 type MetricValue struct {
 	Timestamp time.Time
 	Value     float64
+	IntValue  int64
 }
