@@ -109,7 +109,11 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 			slog.Int("metrics_count", len(resp.Metrics)),
 		)
 
-		instanceIds := make(map[uuid.UUID]struct{})
+		// Group instances by deployment to avoid counting the same replica twice
+		// across deployments. The max across deployments reflects the true peak
+		// during any transition period, and self-corrects once old deployments
+		// fall out of the lookback window.
+		deploymentInstances := make(map[uuid.UUID]map[uuid.UUID]struct{})
 
 		for _, m := range resp.Metrics {
 			serviceName, _ := metadataMap[m.Tags.ServiceId]
@@ -117,7 +121,11 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 			projectName, _ := metadataMap[m.Tags.ProjectId]
 
 			if (m.Tags.DeploymentInstanceId != uuid.UUID{}) {
-				instanceIds[m.Tags.DeploymentInstanceId] = struct{}{}
+				deploymentId := m.Tags.DeploymentId
+				if deploymentInstances[deploymentId] == nil {
+					deploymentInstances[deploymentId] = make(map[uuid.UUID]struct{})
+				}
+				deploymentInstances[deploymentId][m.Tags.DeploymentInstanceId] = struct{}{}
 			}
 
 			metric := Metric{
@@ -146,7 +154,14 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 			allMetrics = append(allMetrics, metric)
 		}
 
-		if len(instanceIds) > 0 {
+		var maxInstanceCount int64
+		for _, instances := range deploymentInstances {
+			if count := int64(len(instances)); count > maxInstanceCount {
+				maxInstanceCount = count
+			}
+		}
+
+		if maxInstanceCount > 0 {
 			serviceName, _ := metadataMap[serviceId]
 			environmentName, _ := metadataMap[environmentId]
 
@@ -164,7 +179,7 @@ func CollectMetrics(ctx context.Context, gqlClient *railway.GraphQLClient, metri
 				Values: []MetricValue{
 					{
 						Timestamp: time.Now(),
-						IntValue:  int64(len(instanceIds)),
+						IntValue:  maxInstanceCount,
 					},
 				},
 			})
