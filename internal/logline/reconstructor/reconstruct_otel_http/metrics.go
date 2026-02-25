@@ -19,7 +19,7 @@ var measurementToOtel = map[string]struct {
 	"EPHEMERAL_DISK_USAGE_GB": {Name: "railway.ephemeral_disk.usage", Unit: "GBy"},
 	"NETWORK_RX_GB":           {Name: "railway.network.rx", Unit: "GBy"},
 	"NETWORK_TX_GB":           {Name: "railway.network.tx", Unit: "GBy"},
-	"INSTANCE_COUNT":           {Name: "railway.instance.count", Unit: "1"},
+	"INSTANCE_COUNT":          {Name: "railway.instance.count", Unit: "1"},
 }
 
 func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
@@ -74,15 +74,15 @@ func MetricsOtel(metricsList []metrics.Metric) ([]byte, error) {
 		}
 
 		if g.tags.ServiceName != "" {
-			resourceAttrs = append(resourceAttrs, stringAttribute("service_name", g.tags.ServiceName))
+			resourceAttrs = append(resourceAttrs, stringAttribute("service", g.tags.ServiceName))
 		}
 
 		if g.tags.EnvironmentName != "" {
-			resourceAttrs = append(resourceAttrs, stringAttribute("environment_name", g.tags.EnvironmentName))
+			resourceAttrs = append(resourceAttrs, stringAttribute("env", g.tags.EnvironmentName))
 		}
 
 		if g.tags.ProjectName != "" {
-			resourceAttrs = append(resourceAttrs, stringAttribute("project_name", g.tags.ProjectName))
+			resourceAttrs = append(resourceAttrs, stringAttribute("project", g.tags.ProjectName))
 		}
 
 		var otelMetrics []metric
