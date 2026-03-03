@@ -13,6 +13,8 @@ query metrics(
     measurements: $measurements
 
     groupBy: [PROJECT_ID, ENVIRONMENT_ID, SERVICE_ID, DEPLOYMENT_ID, DEPLOYMENT_INSTANCE_ID]
+
+    sampleRateSeconds: 30
   ) {
     measurement
     tags {
