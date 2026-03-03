@@ -67,8 +67,6 @@ func getMetadataMapForEnvironment(ctx context.Context, g *graphql.Client, enviro
 var defaultMeasurements = []string{
 	"CPU_USAGE",
 	"MEMORY_USAGE_GB",
-	"DISK_USAGE_GB",
-	"EPHEMERAL_DISK_USAGE_GB",
 	"NETWORK_RX_GB",
 	"NETWORK_TX_GB",
 }
